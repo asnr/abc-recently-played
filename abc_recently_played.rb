@@ -22,28 +22,38 @@ end
 
 ABC_RADIO_DOMAIN = 'music.abcradio.net.au'.freeze
 ABC_JAZZ = 'jazz'.freeze
+TRIPLEJ = 'triplej'.freeze
+AVAILABLE_STATIONS = [ABC_JAZZ, TRIPLEJ].freeze
 
-number_of_tracks_to_fetch = 5
-radio_station = ABC_JAZZ
-uri = URI("https://#{ABC_RADIO_DOMAIN}/api/v1/plays/search.json")
-uri.query = URI.encode_www_form(station: ABC_JAZZ,
-                                limit: number_of_tracks_to_fetch,
-                                order: 'desc')
-response = Net::HTTP.get_response(uri)
+def main(radio_station)
+  number_of_tracks_to_fetch = 5
+  uri = URI("https://#{ABC_RADIO_DOMAIN}/api/v1/plays/search.json")
+  uri.query = URI.encode_www_form(station: radio_station,
+                                  limit: number_of_tracks_to_fetch,
+                                  order: 'desc')
+  response = Net::HTTP.get_response(uri)
 
-response_data = JSON.parse(response.body)
+  response_data = JSON.parse(response.body)
 
-track_data = response_data['items']
-tracks = track_data.map do |track|
-  time_played_raw = track['played_time']
-  time_played = Time.parse(time_played_raw)
-  name = track['recording']['title']
-  artist = track['recording']['artists'].first()['name']
-  release_data = track['recording']['releases']
-  album = release_data.map { |release| release['title'] }.join(', ')
-  Track.new(name: name, artist: artist, album: album, time_played: time_played)
+  track_data = response_data['items']
+  tracks = track_data.map do |track|
+    time_played_raw = track['played_time']
+    time_played = Time.parse(time_played_raw)
+    name = track['recording']['title']
+    artist = track['recording']['artists'].first()['name']
+    release_data = track['recording']['releases']
+    album = release_data.map { |release| release['title'] }.join(', ')
+    Track.new(name: name, artist: artist, album: album, time_played: time_played)
+  end
+
+  tracks.each do |track|
+    puts track.to_s
+  end
 end
 
-tracks.each do |track|
-  puts track.to_s
+if ARGV.length != 1 || !AVAILABLE_STATIONS.include?(ARGV[0])
+  puts "usage: abc_recently_played #{AVAILABLE_STATIONS.join('|')}"
+else
+  radio_station = ARGV[0]
+  main(radio_station)
 end
